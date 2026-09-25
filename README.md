@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finanças do Hotel
 
-## Getting Started
+Gestão de entradas, saídas e perdas de um hotel Habbo, com entrada automática de pagamentos do PicPay.
 
-First, run the development server:
+## O que faz
+
+- **Painel**: entradas, saídas, perdas e saldo do período, gráfico por dia e quem mais comprou.
+- **Lançamentos**: lista com filtro por período, tipo, categoria e busca por descrição ou nick. Entrada, saída ou perda manual em um formulário.
+- **Perdas**: tipo próprio de lançamento (golpe, comprovante falso, calote, estorno), separado das despesas normais, para o relatório mostrar quanto se perdeu e não só quanto se gastou.
+- **Relatórios**: mês a mês, por categoria, por jogador, margem e perdas sobre entradas. Exporta CSV que abre direto no Excel.
+- **PicPay**:
+  - *Cobrança*: gera link de pagamento. Quando o jogador paga, o PicPay avisa o sistema e a entrada é lançada sozinha, com nick e produto. Estorno e chargeback viram perda automaticamente.
+  - *Extrato*: importa o CSV do extrato para pegar Pix e transferências que não passaram por uma cobrança. Reimportar o mesmo arquivo não duplica.
+
+## Rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env    # sem PICPAY_TOKEN roda em modo simulado
+pnpm dev                # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Requer Node 22.5 ou mais novo (o banco é o SQLite embutido no Node, `node:sqlite`). O arquivo fica em `data/financas.db`: faça backup dele.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Ligar o PicPay de verdade
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. A integração usa a **API de E-commerce do PicPay**, que exige conta **PicPay Empresas** (lojista). Conta pessoal não tem API: nesse caso use só a importação de extrato.
+2. No painel do lojista, pegue o `x-picpay-token` e o `x-seller-token` e coloque em `PICPAY_TOKEN` e `PICPAY_SELLER_TOKEN`.
+3. Publique o sistema num endereço público com HTTPS e coloque em `APP_URL`. O PicPay chama `APP_URL/api/picpay/callback` a cada mudança de pagamento.
+4. O retorno do PicPay não é aceito de olhos fechados: o sistema confere o `x-seller-token` e depois consulta o status na API antes de lançar.
 
-## Learn More
+## Hospedagem
 
-To learn more about Next.js, take a look at the following resources:
+SQLite precisa de disco persistente: VPS, Railway ou Fly.io com volume. Vercel não serve (o disco é apagado a cada deploy). Defina `APP_SENHA` antes de expor na internet.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estrutura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/lib/db.ts           esquema do banco e categorias iniciais
+src/lib/lancamentos.ts  consultas e totais
+src/lib/picpay.ts       cliente PicPay + modo simulado
+src/lib/extrato.ts      importação de CSV
+src/app/actions.ts      ações dos formulários
+src/app/api/picpay/callback  retorno do PicPay
+src/proxy.ts            senha de acesso
+```
