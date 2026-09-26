@@ -23,6 +23,7 @@ export function TabelaLancamentos({ linhas, excluir = false }: { linhas: Lancame
           <tr>
             <th>Data</th>
             <th>Tipo</th>
+            <th>Raro</th>
             <th>Descrição</th>
             <th>Categoria</th>
             <th>Jogador</th>
@@ -38,6 +39,7 @@ export function TabelaLancamentos({ linhas, excluir = false }: { linhas: Lancame
               <tr key={l.id}>
                 <td className="whitespace-nowrap">{formatarData(l.data)}</td>
                 <td className={`font-medium ${e.cor}`}>{e.texto}</td>
+                <td className="font-medium">{l.raro ?? ""}</td>
                 <td>{l.descricao}</td>
                 <td className="text-suave">{l.categoria_nome ?? "—"}</td>
                 <td>{l.jogador ?? ""}</td>

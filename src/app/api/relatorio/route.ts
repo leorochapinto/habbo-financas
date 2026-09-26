@@ -14,12 +14,13 @@ export function GET(request: NextRequest) {
   const { de, ate } = periodoDaUrl(sp);
   const linhas = listarLancamentos({ de, ate }, 100_000);
 
-  const cab = ["Data", "Tipo", "Categoria", "Descrição", "Jogador", "Valor (R$)", "Origem"];
+  const cab = ["Data", "Tipo", "Categoria", "Raro", "Descrição", "Jogador", "Valor (R$)", "Origem"];
   const corpo = linhas.map((l) =>
     [
       l.data,
       NATUREZA[l.natureza],
       l.categoria_nome,
+      l.raro,
       l.descricao,
       l.jogador,
       ((l.natureza === "receita" ? 1 : -1) * l.valor_centavos / 100).toFixed(2).replace(".", ","),

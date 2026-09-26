@@ -3,7 +3,8 @@ import { cancelar, consultarCobranca } from "@/app/actions";
 import { formatarReais } from "@/lib/dinheiro";
 import { listarCategorias } from "@/lib/lancamentos";
 import { listarCobrancas, modoSimulado, ROTULO_STATUS } from "@/lib/picpay";
-import { FormCobranca, FormExtrato } from "./Formularios";
+import Link from "next/link";
+import { FormCobranca } from "./Formularios";
 
 const COR_STATUS: Record<string, string> = {
   paid: "text-receita",
@@ -29,24 +30,14 @@ export default async function PicPay() {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="cartao">
-          <h2 className="font-medium">Gerar cobrança</h2>
-          <p className="mb-4 mt-1 text-sm text-suave">
-            Cria um link de pagamento. Quando o jogador pagar, o PicPay avisa o sistema e a entrada é lançada sozinha.
-          </p>
-          <FormCobranca categorias={listarCategorias("entrada")} />
-        </section>
-
-        <section className="cartao">
-          <h2 className="font-medium">Importar extrato</h2>
-          <p className="mb-4 mt-1 text-sm text-suave">
-            Para Pix e transferências que não vieram de uma cobrança gerada aqui. Envie o CSV do extrato: valores
-            positivos viram entrada, negativos viram saída. Reenviar o mesmo arquivo não duplica nada.
-          </p>
-          <FormExtrato />
-        </section>
-      </div>
+      <section className="cartao">
+        <h2 className="font-medium">Gerar cobrança</h2>
+        <p className="mb-4 mt-1 text-sm text-suave">
+          Exige conta PicPay Empresas. Cria um link de pagamento e, quando o jogador paga, a entrada é lançada sozinha.
+          Com conta pessoa física, use a <Link href="/importar" className="text-destaque underline">importação de CSV</Link>.
+        </p>
+        <FormCobranca categorias={listarCategorias("entrada")} />
+      </section>
 
       <section className="cartao">
         <h2 className="mb-4 font-medium">Cobranças</h2>

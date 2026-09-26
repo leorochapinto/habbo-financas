@@ -21,6 +21,7 @@ export interface Lancamento {
   categoria_id: number | null;
   categoria_nome: string | null;
   jogador: string | null;
+  raro: string | null;
   origem: Origem;
   referencia_externa: string | null;
   criado_em: string;
@@ -34,6 +35,7 @@ export interface NovoLancamento {
   descricao: string;
   categoria_id: number | null;
   jogador: string | null;
+  raro?: string | null;
   origem?: Origem;
   referencia_externa?: string | null;
 }
@@ -72,8 +74,8 @@ export function criarLancamento(l: NovoLancamento): boolean {
   const resultado = db()
     .prepare(
       `INSERT OR IGNORE INTO lancamentos
-         (tipo, natureza, valor_centavos, data, descricao, categoria_id, jogador, origem, referencia_externa)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (tipo, natureza, valor_centavos, data, descricao, categoria_id, jogador, raro, origem, referencia_externa)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       l.tipo,
@@ -83,6 +85,7 @@ export function criarLancamento(l: NovoLancamento): boolean {
       l.descricao,
       l.categoria_id,
       l.jogador,
+      l.raro ?? null,
       l.origem ?? "manual",
       l.referencia_externa ?? null,
     );
@@ -105,8 +108,8 @@ function where(f: Filtro): { sql: string; params: Array<string | number> } {
     params.push(f.categoria_id);
   }
   if (f.busca) {
-    partes.push("(l.descricao LIKE ? OR l.jogador LIKE ?)");
-    params.push(`%${f.busca}%`, `%${f.busca}%`);
+    partes.push("(l.descricao LIKE ? OR l.jogador LIKE ? OR l.raro LIKE ?)");
+    params.push(`%${f.busca}%`, `%${f.busca}%`, `%${f.busca}%`);
   }
   return { sql: partes.join(" AND "), params };
 }

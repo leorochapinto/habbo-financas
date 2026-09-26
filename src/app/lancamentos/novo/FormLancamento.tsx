@@ -10,44 +10,63 @@ const OPCOES: Array<{ valor: Natureza; texto: string; ajuda: string; cor: string
   { valor: "perda", texto: "Perda", ajuda: "Dinheiro perdido (golpe, estorno, calote).", cor: "peer-checked:border-perda peer-checked:text-perda" },
 ];
 
+const RARO: Record<Natureza, { raro: string; valor: string; categoria: string }> = {
+  receita: { raro: "Raro que ganhei", valor: "Valor ganho (R$)", categoria: "Raros e mobis" },
+  despesa: { raro: "Raro que comprei", valor: "Valor pago (R$)", categoria: "Compra de raros" },
+  perda: { raro: "Raro que perdi", valor: "Valor perdido (R$)", categoria: "Golpe" },
+};
+
 export function FormLancamento({
   naturezaInicial,
+  travada,
   hoje,
   categorias,
 }: {
   naturezaInicial: Natureza;
+  /** true: o tipo veio do botão clicado e não aparece para escolha */
+  travada: boolean;
   hoje: string;
   categorias: { entrada: Categoria[]; saida: Categoria[] };
 }) {
   const [estado, enviar, enviando] = useActionState(salvarLancamento, null);
   const [natureza, setNatureza] = useState<Natureza>(naturezaInicial);
   const lista = natureza === "receita" ? categorias.entrada : categorias.saida;
-  const sugerida = natureza === "perda" ? lista.find((c) => c.nome.startsWith("Golpe"))?.id : undefined;
+  const textos = RARO[natureza];
+  const sugerida = lista.find((c) => c.nome.startsWith(textos.categoria))?.id;
 
   return (
     <form action={enviar} className="cartao space-y-4">
-      <fieldset className="grid grid-cols-3 gap-2">
-        {OPCOES.map((o) => (
-          <label key={o.valor} className="cursor-pointer">
-            <input
-              type="radio"
-              name="natureza"
-              value={o.valor}
-              checked={natureza === o.valor}
-              onChange={() => setNatureza(o.valor)}
-              className="peer sr-only"
-            />
-            <div className={`rounded-lg border-2 border-borda p-3 text-center ${o.cor}`}>
-              <div className="font-medium">{o.texto}</div>
-              <div className="mt-1 text-xs text-suave">{o.ajuda}</div>
-            </div>
-          </label>
-        ))}
-      </fieldset>
+      {travada ? (
+        <input type="hidden" name="natureza" value={natureza} />
+      ) : (
+        <fieldset className="grid grid-cols-3 gap-2">
+          {OPCOES.map((o) => (
+            <label key={o.valor} className="cursor-pointer">
+              <input
+                type="radio"
+                name="natureza"
+                value={o.valor}
+                checked={natureza === o.valor}
+                onChange={() => setNatureza(o.valor)}
+                className="peer sr-only"
+              />
+              <div className={`rounded-lg border-2 border-borda p-3 text-center ${o.cor}`}>
+                <div className="font-medium">{o.texto}</div>
+                <div className="mt-1 text-xs text-suave">{o.ajuda}</div>
+              </div>
+            </label>
+          ))}
+        </fieldset>
+      )}
+
+      <label className="block">
+        <span className="rotulo">{textos.raro}</span>
+        <input name="raro" placeholder="Ex.: Trono de Dragão" className="campo" />
+      </label>
 
       <div className="grid grid-cols-2 gap-3">
         <label>
-          <span className="rotulo">Valor (R$)</span>
+          <span className="rotulo">{textos.valor}</span>
           <input name="valor" inputMode="decimal" placeholder="0,00" required className="campo" />
         </label>
         <label>
@@ -69,11 +88,10 @@ export function FormLancamento({
       </label>
 
       <label className="block">
-        <span className="rotulo">Descrição</span>
+        <span className="rotulo">Descrição (opcional se o raro estiver preenchido)</span>
         <textarea
           name="descricao"
           rows={3}
-          required
           className="campo"
           placeholder={
             natureza === "perda"

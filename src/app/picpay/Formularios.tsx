@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { gerarCobranca, importarExtrato } from "@/app/actions";
+import { gerarCobranca } from "@/app/actions";
 import type { Categoria } from "@/lib/lancamentos";
 
 export function FormCobranca({ categorias }: { categorias: Categoria[] }) {
@@ -57,23 +57,6 @@ export function FormCobranca({ categorias }: { categorias: Categoria[] }) {
       <button className="botao" disabled={enviando}>
         {enviando ? "Gerando…" : "Gerar link de pagamento"}
       </button>
-    </form>
-  );
-}
-
-export function FormExtrato() {
-  const [estado, enviar, enviando] = useActionState(importarExtrato, null);
-  return (
-    <form action={enviar} className="space-y-3">
-      <input type="file" name="arquivo" accept=".csv,text/csv" required className="campo" />
-      {estado?.erro && <p className="text-sm text-perda">{estado.erro}</p>}
-      {estado?.ok && <p className="text-sm text-receita">{estado.ok}</p>}
-      <button className="botao" disabled={enviando}>
-        {enviando ? "Importando…" : "Importar"}
-      </button>
-      <p className="text-xs text-suave">
-        Colunas reconhecidas pelo nome: Data, Descrição, Valor e, se houver, Jogador/Nome/Pagador. Separador ; ou ,
-      </p>
     </form>
   );
 }

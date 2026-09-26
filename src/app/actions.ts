@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { paraCentavos } from "@/lib/dinheiro";
 import { criarCategoria, criarLancamento, excluirLancamento, type Natureza, type Tipo } from "@/lib/lancamentos";
 import { cancelarCobranca, criarCobranca, modoSimulado, sincronizarStatus, type StatusPicPay } from "@/lib/picpay";
-import { importarCsv } from "@/lib/extrato";
+import { gravarLinhas, lerCsv, type LinhaConfirmada, type Previa } from "@/lib/extrato";
 
 // Toda rota (inclusive a chamada destas actions) passa pela senha do proxy.ts.
 
@@ -30,8 +30,9 @@ export async function salvarLancamento(_: Estado, fd: FormData): Promise<Estado>
   const data = campo(fd, "data");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return { erro: "Data inválida." };
 
+  const raro = campo(fd, "raro") || null;
   const descricao = campo(fd, "descricao");
-  if (!descricao) return { erro: "Descreva o lançamento (ex.: o que foi perdido e como)." };
+  if (!descricao && !raro) return { erro: "Informe o raro ou descreva o lançamento." };
 
   const categoria = Number(campo(fd, "categoria_id")) || null;
   criarLancamento({
@@ -42,6 +43,7 @@ export async function salvarLancamento(_: Estado, fd: FormData): Promise<Estado>
     descricao,
     categoria_id: categoria,
     jogador: campo(fd, "jogador") || null,
+    raro,
   });
   atualizarTudo();
   redirect(`/lancamentos?ok=${natureza}`);
@@ -112,13 +114,48 @@ export async function simularStatus(fd: FormData): Promise<void> {
   redirect("/picpay");
 }
 
-export async function importarExtrato(_: Estado, fd: FormData): Promise<Estado> {
+export type EstadoPrevia = { erro?: string; previa?: Previa; nomeArquivo?: string; lidoEm?: number } | null;
+
+/** Etapa 1: lê o CSV (arquivo ou texto colado) e devolve a prévia. Não grava nada. */
+export async function lerExtrato(_: EstadoPrevia, fd: FormData): Promise<EstadoPrevia> {
   const arquivo = fd.get("arquivo");
-  if (!(arquivo instanceof File) || arquivo.size === 0) return { erro: "Escolha um arquivo CSV." };
-  if (arquivo.size > 5 * 1024 * 1024) return { erro: "Arquivo maior que 5 MB." };
-  const r = importarCsv(await arquivo.text());
+  let conteudo = campo(fd, "texto");
+  let nomeArquivo = "texto colado";
+  if (arquivo instanceof File && arquivo.size > 0) {
+    if (arquivo.size > 5 * 1024 * 1024) return { erro: "Arquivo maior que 5 MB." };
+    conteudo = await arquivo.text();
+    nomeArquivo = arquivo.name;
+  }
+  if (!conteudo) return { erro: "Escolha um arquivo CSV ou cole o conteúdo." };
+  const previa = lerCsv(conteudo);
+  if (!previa.linhas.length) return { erro: previa.erros.join(" · ") || "Nenhuma linha válida no arquivo." };
+  return { previa, nomeArquivo, lidoEm: Date.now() };
+}
+
+/** Etapa 2: grava as linhas que a pessoa marcou na prévia. */
+export async function confirmarImportacao(_: Estado, fd: FormData): Promise<Estado> {
+  let linhas: LinhaConfirmada[];
+  try {
+    linhas = JSON.parse(campo(fd, "linhas"));
+  } catch {
+    return { erro: "Não consegui ler as linhas escolhidas. Recarregue a prévia." };
+  }
+  if (!Array.isArray(linhas) || !linhas.length) return { erro: "Marque ao menos uma linha para importar." };
+  const validas = linhas.every(
+    (l) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(l.data) &&
+      Number.isInteger(l.centavos) &&
+      l.centavos !== 0 &&
+      ["receita", "despesa", "perda"].includes(l.natureza) &&
+      (l.natureza === "receita") === l.centavos > 0 &&
+      typeof l.referencia === "string" &&
+      l.referencia.startsWith("extrato:") &&
+      (l.categoria_id === null || Number.isInteger(l.categoria_id)),
+  );
+  if (!validas) return { erro: "Alguma linha chegou inválida. Recarregue a prévia." };
+  const r = gravarLinhas(
+    linhas.map((l) => ({ ...l, descricao: String(l.descricao).slice(0, 300), jogador: l.jogador ? String(l.jogador).slice(0, 80) : null })),
+  );
   atualizarTudo();
-  const resumo = `${r.importadas} importadas, ${r.duplicadas} já existiam, de ${r.lidas} linhas.`;
-  if (r.erros.length) return { erro: `${resumo} Problemas: ${r.erros.slice(0, 5).join(" · ")}` };
-  return { ok: resumo };
+  return { ok: `${r.importadas} lançamentos importados${r.duplicadas ? `, ${r.duplicadas} já existiam` : ""}.` };
 }

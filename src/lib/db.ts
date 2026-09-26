@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS lancamentos (
   descricao           TEXT NOT NULL DEFAULT '',
   categoria_id        INTEGER REFERENCES categorias(id) ON DELETE SET NULL,
   jogador             TEXT,                   -- nick no Habbo, quando houver
+  raro                TEXT,                   -- raro ganho, comprado ou perdido
   origem              TEXT NOT NULL DEFAULT 'manual'
                       CHECK (origem IN ('manual', 'picpay_cobranca', 'picpay_extrato')),
   referencia_externa  TEXT UNIQUE,            -- evita importar a mesma entrada duas vezes
@@ -54,6 +55,7 @@ const CATEGORIAS_INICIAIS: Array<[string, "entrada" | "saida"]> = [
   ["Domínio e serviços", "saida"],
   ["Equipe / staff", "saida"],
   ["Divulgação", "saida"],
+  ["Compra de raros", "saida"],
   ["Golpe / fraude", "saida"],
   ["Estorno PicPay", "saida"],
   ["Outras saídas", "saida"],
@@ -65,6 +67,9 @@ function abrir(): DatabaseSync {
   const db = new DatabaseSync(arquivo);
   db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA);
+  // Bancos criados antes da coluna raro existir.
+  const colunas = db.prepare("PRAGMA table_info(lancamentos)").all() as Array<{ name: string }>;
+  if (!colunas.some((c) => c.name === "raro")) db.exec("ALTER TABLE lancamentos ADD COLUMN raro TEXT");
   const inserir = db.prepare("INSERT OR IGNORE INTO categorias (nome, tipo) VALUES (?, ?)");
   for (const [nome, tipo] of CATEGORIAS_INICIAIS) inserir.run(nome, tipo);
   return db;

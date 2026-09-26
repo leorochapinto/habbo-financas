@@ -15,7 +15,7 @@ const MENU = [
   { href: "/", rotulo: "Painel" },
   { href: "/lancamentos", rotulo: "Lançamentos" },
   { href: "/relatorios", rotulo: "Relatórios" },
-  { href: "/picpay", rotulo: "PicPay" },
+  { href: "/importar", rotulo: "Importar CSV" },
   { href: "/categorias", rotulo: "Categorias" },
 ];
 
@@ -35,9 +35,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
                 </Link>
               ))}
             </div>
-            <Link href="/lancamentos/novo?natureza=perda" className="botao ml-auto">
-              Registrar perda
-            </Link>
+            <div className="ml-auto flex gap-2">
+              <Link href="/lancamentos/novo?natureza=receita" className="botao bg-receita">
+                Registrar entrada
+              </Link>
+              <Link href="/lancamentos/novo?natureza=despesa" className="botao bg-despesa">
+                Registrar saída
+              </Link>
+              <Link href="/lancamentos/novo?natureza=perda" className="botao bg-perda">
+                Registrar perda
+              </Link>
+            </div>
           </nav>
         </header>
         <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
